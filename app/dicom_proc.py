@@ -71,6 +71,8 @@ class PlannedFile:
     ds: pydicom.Dataset
     reused: bool = False          # 命中既有实例，直接复用对象存储文件
     object_relpath: str = ""
+    # 介质来源：实例在来源 ZIP 内的路径（普通文件上传为空字符串）
+    media_path: str = ""
 
 
 @dataclass
@@ -363,10 +365,10 @@ def process_plan(plan: BatchPlan, batch_id: str) -> None:
                     )
                 conn.execute(
                     "INSERT OR IGNORE INTO batch_files(batch_id, sop_uid, orig_name, "
-                    "original_patient_id, original_study_uid, original_series_uid) "
-                    "VALUES(?,?,?,?,?,?)",
+                    "original_patient_id, original_study_uid, original_series_uid, "
+                    "media_path) VALUES(?,?,?,?,?,?,?)",
                     (batch_id, pf.sop_uid, pf.orig_name,
-                     pf.patient_id, pf.study_uid, pf.series_uid),
+                     pf.patient_id, pf.study_uid, pf.series_uid, pf.media_path),
                 )
     finally:
         conn.close()

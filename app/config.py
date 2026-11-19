@@ -41,6 +41,11 @@ class _Paths:
     def batches_dir(self) -> Path:
         return self.data_dir / "batches"
 
+    @property
+    def media_dir(self) -> Path:
+        # 上传的影像介质 ZIP，按 SHA-256 内容寻址保存
+        return self.data_dir / "media"
+
 
 _paths = _Paths()
 # 向后兼容的模块级名称（首次导入时快照；运行时请使用 get_* 函数）
@@ -49,6 +54,7 @@ DB_PATH = _paths.db_path
 OBJECTS_DIR = _paths.objects_dir
 UPLOAD_TMP_DIR = _paths.upload_tmp_dir
 BATCHES_DIR = _paths.batches_dir
+MEDIA_DIR = _paths.media_dir
 
 
 def get_db_path() -> Path:
@@ -65,6 +71,10 @@ def get_upload_tmp_dir() -> Path:
 
 def get_batches_dir() -> Path:
     return _paths.batches_dir
+
+
+def get_media_dir() -> Path:
+    return _paths.media_dir
 
 
 def get_uid_prefix() -> str:
@@ -97,5 +107,6 @@ def ensure_dirs() -> None:
         _paths.objects_dir,
         _paths.upload_tmp_dir,
         _paths.batches_dir,
+        _paths.media_dir,
     ):
         path.mkdir(parents=True, exist_ok=True)

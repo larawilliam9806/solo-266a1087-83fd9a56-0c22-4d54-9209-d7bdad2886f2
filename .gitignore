@@ -3,9 +3,13 @@ __pycache__/
 .pytest_cache/
 .venv/
 venv/
+# 本地依赖目录（容器/CI 通过 requirements.txt 安装）
+.pylibs/
 # 运行时数据目录（与仓库自带的合成样例 samples/data 区分）
 /data/
 *.db
 *.db-wal
 *.db-shm
+# 生成的介质样例 ZIP
+samples/media/
 .DS_Store

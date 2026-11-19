@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}介质 {{ upload.zip_sha256[:12] }}{% endblock %}
+{% block body %}
+<section class="card">
+  <h2 style="margin-top:0;">影像介质预览</h2>
+  <p class="muted">来源文件：{{ upload.filename or '—' }}</p>
+  <p class="muted">ZIP SHA-256：<code>{{ upload.zip_sha256 }}</code></p>
+  <p class="muted">
+    DICOMDIR 成员：<code>{{ upload.dicomdir_member }}</code> ｜
+    IMAGE 记录 {{ upload.image_count }} 条 ｜
+    已忽略非 IMAGE 叶子记录 {{ upload.ignored_count }} 条
+    （SR、RT STRUCT 等非 IMAGE 记录不参与入库；目录未登记的文件不入库）
+  </p>
+  <p class="muted">
+    仅列出 DICOMDIR 登记的 Study / Series 与各序列 IMAGE 实例数。选择一个序列后确认入库，
+    系统会从<b>同一份 ZIP</b> 取文件并逐条核对路径与文件头 UID，核对失败将指出问题记录并拒绝发布。
+  </p>
+</section>
+
+<form method="post" action="{{ url_for('media_confirm', zip_sha256=upload.zip_sha256) }}">
+{% for patient in index.patients %}
+<section class="card">
+  <h3 style="margin-top:0;">
+    患者 {{ patient.patient_id or '（无 PatientID）' }}
+    {% if patient.patient_name %}<span class="muted">｜{{ patient.patient_name }}</span>{% endif %}
+  </h3>
+  {% for study in patient.studies %}
+  <div style="margin:14px 0 8px;">
+    <b>Study</b> <code>{{ study.study_uid }}</code>
+    <span class="muted">
+      {% if study.study_date %}｜ {{ study.study_date }}{% endif %}
+      {% if study.study_description %}｜ {{ study.study_description }}{% endif %}
+    </span>
+  </div>
+  <table>
+    <thead><tr>
+      <th style="width:46px;">选择</th>
+      <th>Series UID</th>
+      <th>Modality</th>
+      <th>序号</th>
+      <th>IMAGE 实例数</th>
+      <th>发布状态 / 操作</th>
+    </tr></thead>
+    <tbody>
+    {% for series in study.series %}
+      {% set pub = publications.get(series.series_uid) %}
+      <tr>
+        <td>
+          {% if series.images %}
+            <input type="radio" name="series_uid" value="{{ series.series_uid }}"
+                   {% if pub and pub.status == 'ready' %}disabled{% endif %}>
+          {% else %}
+            <input type="radio" name="series_uid" value="{{ series.series_uid }}" disabled>
+          {% endif %}
+        </td>
+        <td><code>{{ series.series_uid }}</code></td>
+        <td>{{ series.modality or '—' }}</td>
+        <td>{{ series.series_number or '—' }}</td>
+        <td>{{ series.images|length }}</td>
+        <td>
+          {% if not series.images %}
+            <span class="muted">无 IMAGE 记录，不可入库</span>
+          {% elif pub and pub.status == 'ready' %}
+            <span class="status-ready">已发布</span>
+            <a href="{{ url_for('batch_detail', batch_id=pub.batch_id) }}">批次 <code>{{ pub.batch_id[:12] }}</code></a>
+          {% elif pub and pub.status == 'processing' %}
+            <span class="status-processing">发布中</span>
+            <a href="{{ url_for('batch_detail', batch_id=pub.batch_id) }}">查看批次</a>
+          {% elif pub and pub.status == 'failed' %}
+            <span class="status-failed">上次失败，可重试</span>
+          {% else %}
+            <span class="muted">未发布</span>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">该患者下没有 STUDY 记录。</p>
+  {% endfor %}
+</section>
+{% else %}
+<section class="card"><p class="muted">DICOMDIR 中没有可展示的患者/检查记录。</p></section>
+{% endfor %}
+
+<section class="card">
+  <button class="btn" type="submit">确认所选序列入库</button>
+  <a class="btn" style="background:#667085;" href="{{ url_for('index') }}">返回首页</a>
+  <p class="muted" style="margin-bottom:0;">
+    同一份 ZIP 的同一序列只会发布一次：重复确认将直接返回已发布批次；发布失败后可重新确认重试。
+  </p>
+</section>
+</form>
+{% endblock %}

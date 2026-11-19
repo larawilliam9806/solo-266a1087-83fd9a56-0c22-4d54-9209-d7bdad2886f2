@@ -5,7 +5,14 @@
   <h2 style="margin-top:0;">批次 <code>{{ batch.id }}</code></h2>
   <p>状态：<span class="status-{{ batch.status }}">{{ batch.status }}</span></p>
   <p>文件数：{{ batch.original_count }} ｜ 创建：{{ batch.created_at }} ｜ 完成：{{ batch.finished_at or '—' }}</p>
-  {% if batch.error %}<div class="flash error">{{ batch.error }}</div>{% endif %}
+  {% if batch.source_zip_sha256 %}
+  <p>来源介质 ZIP SHA-256：<code>{{ batch.source_zip_sha256 }}</code></p>
+  <p>发布序列 UID：<code>{{ batch.source_series_uid }}</code></p>
+  <p>
+    <a href="{{ url_for('media_preview', zip_sha256=batch.source_zip_sha256) }}">← 返回该介质预览页</a>
+  </p>
+  {% endif %}
+  {% if batch.error %}<div class="flash error" style="white-space:pre-wrap;">{{ batch.error }}</div>{% endif %}
   {% if batch.status == 'ready' %}
     <a class="btn" href="{{ url_for('download', batch_id=batch.id) }}">下载整批处理结果（zip，含 manifest.csv）</a>
   {% else %}
@@ -20,11 +27,14 @@
 <section class="card">
   <h2 style="margin-top:0;">批次内文件</h2>
   <table>
-    <thead><tr><th>原文件名</th><th>原 PatientID</th><th>原 Study UID</th><th>原 Series UID</th><th>原 SOP UID</th></tr></thead>
+    <thead><tr>
+      <th>原文件名 / 介质内路径</th><th>原 PatientID</th>
+      <th>原 Study UID</th><th>原 Series UID</th><th>原 SOP UID</th>
+    </tr></thead>
     <tbody>
     {% for f in files %}
       <tr>
-        <td>{{ f.orig_name }}</td>
+        <td>{{ f.orig_name }}{% if f.media_path and f.media_path != f.orig_name %}<br><span class="muted">介质路径：{{ f.media_path }}</span>{% endif %}</td>
         <td>{{ f.original_patient_id }}</td>
         <td><code>{{ f.original_study_uid }}</code></td>
         <td><code>{{ f.original_series_uid }}</code></td>

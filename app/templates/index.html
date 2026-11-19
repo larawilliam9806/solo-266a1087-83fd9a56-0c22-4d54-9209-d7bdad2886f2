@@ -1,7 +1,38 @@
 {% extends "base.html" %}
 {% block body %}
 <section class="card">
-  <h2 style="margin-top:0;">上传新批次</h2>
+  <h2 style="margin-top:0;">上传影像介质 ZIP（按 DICOMDIR 选序列入库）</h2>
+  <p class="muted">
+    上传包含根目录 <code>DICOMDIR</code> 的介质 ZIP。系统读取目录后列出 Study、Series 与各序列
+    IMAGE 实例数，数据员选择一个序列确认入库。仅处理 <b>IMAGE 记录</b>与<b>未压缩 DICOM</b>；
+    确认时从同一份 ZIP 取文件，核对目录路径与文件头 Study/Series/SOP UID，
+    缺件、路径指向包外或不唯一、文件无法读取或 UID 不符都会指出问题记录并拒绝发布。
+  </p>
+  <form method="post" action="{{ url_for('media_upload') }}" enctype="multipart/form-data">
+    <p><input type="file" name="media_zip" accept=".zip,application/zip" required></p>
+    <button class="btn" type="submit">上传并预览介质</button>
+  </form>
+  {% if recent_media %}
+  <h3 style="margin-bottom:8px;">最近上传的介质</h3>
+  <table>
+    <thead><tr><th>ZIP SHA-256</th><th>原始文件名</th><th>IMAGE 记录</th><th>上传时间</th><th>操作</th></tr></thead>
+    <tbody>
+    {% for m in recent_media %}
+      <tr>
+        <td><code>{{ m.zip_sha256[:16] }}…</code></td>
+        <td>{{ m.filename or '—' }}</td>
+        <td>{{ m.image_count }}</td>
+        <td>{{ m.created_at }}</td>
+        <td><a class="btn" href="{{ url_for('media_preview', zip_sha256=m.zip_sha256) }}">预览 / 发布</a></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2 style="margin-top:0;">直接上传 DICOM 文件批次（原有流程）</h2>
   <p class="muted">
     仅接受<b>未压缩传输语法</b>的 DICOM 文件，可多选批量上传。处理规则：
     清空 PatientName、替换 PatientID；Study/Series/SOP 三类 UID 及全部嵌套引用统一换号；
@@ -20,7 +51,7 @@
   {% if batches %}
   <table>
     <thead><tr>
-      <th>批次 ID</th><th>状态</th><th>文件数</th><th>创建时间</th><th>完成时间</th><th>操作</th>
+      <th>批次 ID</th><th>状态</th><th>文件数</th><th>来源介质</th><th>创建时间</th><th>完成时间</th><th>操作</th>
     </tr></thead>
     <tbody>
     {% for b in batches %}
@@ -28,6 +59,7 @@
         <td><a href="{{ url_for('batch_detail', batch_id=b.id) }}"><code>{{ b.id }}</code></a></td>
         <td class="status-{{ b.status }}">{{ b.status }}</td>
         <td>{{ b.original_count }}</td>
+        <td>{% if b.source_zip_sha256 %}<code>{{ b.source_zip_sha256[:12] }}…</code>{% else %}<span class="muted">直接上传</span>{% endif %}</td>
         <td>{{ b.created_at }}</td>
         <td>{{ b.finished_at or '—' }}</td>
         <td>
